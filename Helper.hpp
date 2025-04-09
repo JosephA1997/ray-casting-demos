@@ -1,4 +1,7 @@
 #pragma once
+
+// a collection of useful funtions that i use across projects
+
 #include <algorithm>
 #include <tuple>
 #include <SFML/Graphics.hpp>

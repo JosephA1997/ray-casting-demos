@@ -11,12 +11,10 @@
 
 struct LineSegment 
 {
-  sf::Vector2f a{};
+  sf::Vector2f startPoint{};
 
-  sf::Vector2f b{};
+  sf::Vector2f endPoint{};
 };
-
-struct Intersect { bool result{}; sf::Vector2f pos{};  };
 
 struct imguiColor
 {
@@ -36,22 +34,22 @@ imguiColor constructImguiColor(sf::Color color)
   return imguiColor((float)color.r / 255.f, (float)color.g / 255.f, (float)color.b / 255.f, (float)color.a / 255.f);
 }
 
-Intersect lineIntersect(LineSegment first, LineSegment second)
+std::optional<sf::Vector2f> lineIntersect(LineSegment first, LineSegment second)
 {
-  sf::Vector2f firstVector = (first.b - first.a);
-  sf::Vector2f secondVector = (second.b - second.a);
+  sf::Vector2f firstVector = (first.endPoint - first.startPoint);
+  sf::Vector2f secondVector = (second.endPoint - second.startPoint);
 
   float lengthCrossProduct = firstVector.cross(secondVector);
 
-  sf::Vector2f fms = second.a - first.a; //first line start point minus second
+  sf::Vector2f fms = second.startPoint - first.startPoint; //first line start point minus second
 
   float firstScalar = fms.cross(secondVector) / lengthCrossProduct;
   float secondScalar = fms.cross(firstVector) / lengthCrossProduct;
   
   if ((firstScalar >= 0 and firstScalar <= 1) and (secondScalar >= 0 and secondScalar <= 1))
-    return{ true, sf::Vector2f(first.a.x + (firstScalar * firstVector.x), first.a.y + (firstScalar * firstVector.y)) };
+    return sf::Vector2f(first.startPoint.x + (firstScalar * firstVector.x), first.startPoint.y + (firstScalar * firstVector.y));
   else
-    return{ false, sf::Vector2f(0,0) };
+    return std::nullopt;
 }
 
 sf::VertexArray constructRectangle(sf::Vector2f center, sf::Vector2f size, sf::Color color = sf::Color::Black)
@@ -137,7 +135,7 @@ int main()
 
   {
     float i = 0.f, angleIncrement = 360.f / (float)numRays;
-    for (int i = 0; i < numRays; i++) rays.push_back(constructRay(mousePos, 5000.f, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
+    for (int i = 0; i < numRays; i++) rays.push_back(constructRay(mousePos, rayLength, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
   }
 
   std::vector<sf::VertexArray> polygons;
@@ -147,7 +145,6 @@ int main()
   //main game loop
   while (window.isOpen())
   {
-
     //handle input
     while (const std::optional event = window.pollEvent())
     {
@@ -164,7 +161,7 @@ int main()
         {
         case sf::Keyboard::Scancode::C:
           polygons.clear();
-          polygons.push_back(constructRectangle(center, center));
+          polygons.push_back(constructRectangle(center, center));//outer bounds of the window
           break;
 
         case sf::Keyboard::Scancode::R:
@@ -208,18 +205,17 @@ int main()
 
     for (auto& ray : rays)
     {
-
       sf::Vector2f closestIntersection = ray[1].position;
-      Intersect currentIntersect{};
+      std::optional<sf::Vector2f> currentIntersect{};
       for (auto& poly : polygons)
       {
         for (int i = 1; i <= poly.getVertexCount() - 1; i++) {
           currentIntersect = lineIntersect({ ray[0].position, ray[1].position }, { poly[i - 1].position , poly[i].position });
-          if (currentIntersect.result)
+          if (currentIntersect)
           {
-            if ((closestIntersection - ray[0].position).length() > (currentIntersect.pos - ray[0].position).length())
+            if ((closestIntersection - ray[0].position).length() > (currentIntersect.value() - ray[0].position).length())
             {
-              closestIntersection = currentIntersect.pos;
+              closestIntersection = currentIntersect.value();
             }
           }
         }
