@@ -16,6 +16,12 @@
     <Filter Include="Source Files\Imgui-sfml Files">
       <UniqueIdentifier>{20b9a3b4-eb7c-4baa-be0b-c6e0d295c347}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Classes">
+      <UniqueIdentifier>{fe3c7015-3de6-4e35-adea-c623dcb78c0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Classes">
+      <UniqueIdentifier>{a5f9e058-615a-4f77-a4a5-50a0c3ab5cd7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -36,13 +42,19 @@
     <ClCompile Include="..\..\..\..\..\dev\libraries\imgui\imgui-SFML.cpp">
       <Filter>Source Files\Imgui-sfml Files</Filter>
     </ClCompile>
+    <ClCompile Include="Ray.cpp">
+      <Filter>Source Files\Classes</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Helper.hpp">
+    <ClInclude Include="Utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Random.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Ray.h">
+      <Filter>Header Files\Classes</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

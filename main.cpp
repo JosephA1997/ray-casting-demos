@@ -1,116 +1,20 @@
-#include <SFML/Graphics.hpp>
-#include <imgui-SFML.h>
-#include <imgui.h>
 #include <cmath>
-
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstddef>
 
-#include "Helper.hpp"
+#include <SFML/Graphics.hpp>
+#include <imgui-SFML.h>
+#include <imgui.h>
 
-struct LineSegment 
-{
-  sf::Vector2f startPoint{};
-
-  sf::Vector2f endPoint{};
-};
-
-struct imguiColor
-{
-  float r{};
-  float g{};
-  float b{};
-  float a{1.f};
-
-  sf::Color asSfColor()
-  {
-    return sf::Color(std::uint8_t(r * 255.f), std::uint8_t(g * 255.f), std::uint8_t(b * 255.f), std::uint8_t(a * 255.f));
-  }
-};
-
-imguiColor constructImguiColor(sf::Color color)
-{
-  return imguiColor((float)color.r / 255.f, (float)color.g / 255.f, (float)color.b / 255.f, (float)color.a / 255.f);
-}
-
-std::optional<sf::Vector2f> lineIntersect(LineSegment first, LineSegment second)
-{
-  sf::Vector2f firstVector = (first.endPoint - first.startPoint);
-  sf::Vector2f secondVector = (second.endPoint - second.startPoint);
-
-  float lengthCrossProduct = firstVector.cross(secondVector);
-
-  sf::Vector2f fms = second.startPoint - first.startPoint; //first line start point minus second
-
-  float firstScalar = fms.cross(secondVector) / lengthCrossProduct;
-  float secondScalar = fms.cross(firstVector) / lengthCrossProduct;
-  
-  if ((firstScalar >= 0 and firstScalar <= 1) and (secondScalar >= 0 and secondScalar <= 1))
-    return sf::Vector2f(first.startPoint.x + (firstScalar * firstVector.x), first.startPoint.y + (firstScalar * firstVector.y));
-  else
-    return std::nullopt;
-}
-
-sf::VertexArray constructRectangle(sf::Vector2f center, sf::Vector2f size, sf::Color color = sf::Color::Black)
-{
-  sf::VertexArray rectangle(sf::PrimitiveType::LineStrip, 5);
-  rectangle[0].color = color;
-  rectangle[1].color = color;
-  rectangle[2].color = color;
-  rectangle[3].color = color;
-  rectangle[4].color = color;
-
-  rectangle[0].position = { center.x - size.x, center.y - size.y };
-  rectangle[1].position = { center.x + size.x, center.y - size.y };
-  rectangle[2].position = { center.x + size.x, center.y + size.y };
-  rectangle[3].position = { center.x - size.x, center.y + size.y };
-  rectangle[4].position = { center.x - size.x, center.y - size.y };
-
-  return rectangle;
-
-}
-
-sf::Vector2f constructVector(sf::Vector2f startPoint, sf::Angle angle, float length)
-{
-  return { startPoint.x + (length * std::cos(angle.asRadians())), startPoint.y + (length * std::sin(angle.asRadians())) };
-}
-
-sf::VertexArray constructRandomPolygon(sf::Vector2f center, int vertexLowerBound, int vertexUpperBound, int averageSize, sf::Color color = sf::Color::Black)
-{
-  size_t vertexCount = getRandomNumber<size_t>(vertexLowerBound, vertexUpperBound);
-  sf::VertexArray polygon(sf::PrimitiveType::LineStrip, vertexCount);
-
-  float angleIncrement = 360.f / (float)(vertexCount - 1);
-  float angleStart = getRandomNumber<float>(0, 360);
-
-  for (int i = 0; i < vertexCount - 1; i++)
-  {
-    float angleOffset = getRandomNumber<float>(-(90 / (int)vertexCount), (90 / (int)vertexCount));
-    polygon[i].color = color;
-    polygon[i].position = constructVector(center, sf::degrees(angleStart + (angleIncrement * i) + angleOffset), getRandomNumber<float>((averageSize - 50), (averageSize + 50)));
-  }
-  polygon[vertexCount - 1].position = polygon[0].position;
-  polygon[vertexCount - 1].color = color;
-  return polygon;
-}
-
-sf::VertexArray constructRay(sf::Vector2f start, float length, sf::Angle angle, sf::Color color = sf::Color::Red) 
-{
-  sf::VertexArray ray(sf::PrimitiveType::Lines, 2);
-
-  ray[0].position = start;
-  ray[0].color = color;
-  ray[1].position = constructVector(start, angle, length);
-  ray[1].color = color;
-    
-  return ray;
-}
+#include "Utility.hpp"
+#include "Ray.h"
 
 int main()
 { 
   sf::Vector2f center{ 1920.f / 2.f, 1080.f / 2.f };
-  
+
   //sfml setup
   auto window = sf::RenderWindow(sf::VideoMode({ 1920u, 1080u }), "Ray Casting Test");
 
@@ -123,28 +27,26 @@ int main()
 
   //imGui Variables
   float polySize[2] = { 100.f, 100.f };
-  int numRays{ 10 };
+  int numRays{ 500 };
   int vertexBounds[2] = { 3u, 10u };
   int averageSize{ 100u };
-  float rayLength{ 5000.f };
+  float rayLength{ 500.f };
   imguiColor rayColor = constructImguiColor(sf::Color::Red);
+  imguiColor lightColor = constructImguiColor(sf::Color::Red);
+  bool drawRays{ false };
+  bool drawLight{ true };
 
 
   //initalize vectors
-  std::vector<sf::VertexArray> rays;
-
-  {
-    float i = 0.f, angleIncrement = 360.f / (float)numRays;
-    for (int i = 0; i < numRays; i++) rays.push_back(constructRay(mousePos, rayLength, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
-  }
+  RayVector rays;
 
   std::vector<sf::VertexArray> polygons;
-  polygons.push_back(constructRectangle(center, center));//outer bounds of the window
-
+  polygons.push_back(constructRectangle(center, center));
   
   //main game loop
   while (window.isOpen())
   {
+    rays.clear();
     //handle input
     while (const std::optional event = window.pollEvent())
     {
@@ -161,11 +63,14 @@ int main()
         {
         case sf::Keyboard::Scancode::C:
           polygons.clear();
-          polygons.push_back(constructRectangle(center, center));//outer bounds of the window
           break;
 
         case sf::Keyboard::Scancode::R:
           polygons.push_back(constructRandomPolygon(mousePos, vertexBounds[0] + 1, vertexBounds[1] + 1, averageSize));
+          break;
+
+        case sf::Keyboard::Scancode::Escape:
+          window.close();
           break;
 
         default:
@@ -186,44 +91,72 @@ int main()
         }
       }
 
-      if (rays.empty()) continue;
       if (const auto* mouseMoved = event->getIf<sf::Event::MouseMoved>())
       {
         mousePos = (sf::Vector2f)mouseMoved->position;
-        for (auto& ray : rays) ray[0].position = mousePos;
+        for (auto& ray : rays) ray.changeStart(mousePos);
       }
     }// end user input loop
 
+    if (numRays > 0)
     {
-      float i = 0, angleIncrement = 360.f / (float)rays.size();
-      for (auto& ray : rays)
+      float i = 0.f, angleIncrement = 360.f / (float)numRays;
+      for (int i = 0; i < numRays; i++) rays.push_back(Ray(mousePos, rayLength, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
+    }
+
+    for (auto& poly : polygons)
+    {
+      for (std::size_t i = 0; i < poly.getVertexCount() - 1; i++)
       {
-        ray[1].position = constructVector(ray[0].position, sf::degrees(i * angleIncrement), rayLength);
-        i++;
+        if (distanceBetween(mousePos, poly[i].position) <= rayLength)
+        {
+          sf::Angle angle = sf::radians(std::atan2f(poly[i].position.y - mousePos.y, poly[i].position.x - mousePos.x));
+          rays.push_back(Ray(mousePos, poly[i].position, rayColor.asSfColor()));
+          rays.push_back(Ray(mousePos, rayLength, angle + sf::radians(.00001f), rayColor.asSfColor()));
+          rays.push_back(Ray(mousePos, rayLength, angle - sf::radians(.00001f), rayColor.asSfColor()));
+        }
       }
     }
 
     for (auto& ray : rays)
     {
-      sf::Vector2f closestIntersection = ray[1].position;
+      auto& rayPoints = ray.points();
+      sf::Vector2f closestIntersection = rayPoints[end].position;
       std::optional<sf::Vector2f> currentIntersect{};
       for (auto& poly : polygons)
       {
         for (int i = 1; i <= poly.getVertexCount() - 1; i++) {
-          currentIntersect = lineIntersect({ ray[0].position, ray[1].position }, { poly[i - 1].position , poly[i].position });
+          currentIntersect = lineIntersect({ rayPoints[start].position, rayPoints[end].position }, { poly[i - 1].position , poly[i].position });
           if (currentIntersect)
           {
-            if ((closestIntersection - ray[0].position).length() > (currentIntersect.value() - ray[0].position).length())
+            if ((closestIntersection - rayPoints[start].position).length() > (currentIntersect.value() - rayPoints[start].position).length())
             {
               closestIntersection = currentIntersect.value();
             }
           }
         }
       }
-
-      ray[1].position = closestIntersection;
+      ray.changeEnd(closestIntersection);
     }
 
+    std::sort(rays.begin(), rays.end(), [](const auto& lhs, const auto& rhs) { return lhs.angle().wrapUnsigned().asRadians() < rhs.angle().wrapUnsigned().asRadians(); });
+
+    sf::VertexArray light(sf::PrimitiveType::TriangleFan, 1);
+    if (not rays.empty())
+    {
+      light[0].position = mousePos;
+      light[0].color = lightColor.asSfColor();
+      for (auto& ray : rays)
+      {
+        light.append(ray.points()[end]);
+      }
+      light.append(rays.front().points()[end]);
+    }
+
+    for (int i = 0; i < light.getVertexCount(); i++)
+      light[i].color = lightColor.asSfColor();
+
+    
     ImGui::SFML::Update(window, clock.restart());
 
     ImGui::Begin("Config");
@@ -233,24 +166,28 @@ int main()
     ImGui::Text("R: place a randomly sized polygon at mouse position");
     ImGui::Text("C: clear all polygons");
     ImGui::Unindent();
-    if (ImGui::SliderInt("number of rays", &numRays, 0, 50))
+    ImGui::Checkbox("Render rays", &drawRays);
+    ImGui::SameLine();
+    ImGui::Checkbox("Render light", &drawLight);
+    if (ImGui::SliderInt("number of rays", &numRays, 5, 500))
     {
       rays.clear();
 
       {
         float i = 0.f, angleIncrement = 360.f / (float)numRays;
-        for (int i = 0; i < numRays; i++) rays.push_back(constructRay(mousePos, rayLength, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
+        for (int i = 0; i < numRays; i++) rays.push_back(Ray(mousePos, rayLength, sf::degrees(angleIncrement * i), rayColor.asSfColor()));
       }
 
     }
     ImGui::InputFloat("Ray Length", &rayLength);
     if (ImGui::ColorEdit3("Ray color", &rayColor.r))
     {
-      for (auto& ray : rays)
-      {
-        ray[0].color = rayColor.asSfColor();
-        ray[1].color = rayColor.asSfColor();
-      }
+      for (auto& ray : rays) ray.changeColor(rayColor.asSfColor());
+    }
+    if (ImGui::ColorEdit3("Light color", &lightColor.r))
+    {
+      for (int i = 0; i < light.getVertexCount(); i++)
+        light[i].color = lightColor.asSfColor();
     }
     ImGui::InputFloat2("rectangle Size (X,Y)", polySize, "%.1f");
     ImGui::Text("Random polygon config: ");
@@ -263,7 +200,7 @@ int main()
         vertexBounds[0] = vertexBounds[1];
     }
 
-    if(ImGui::InputInt("Average size", &averageSize))
+    if (ImGui::InputInt("Average size", &averageSize))
     {
       if (averageSize < 20)
       {
@@ -276,18 +213,23 @@ int main()
     window.clear(sf::Color::White);
 
     //render entities
-    for (auto& poly : polygons)
-    window.draw(poly);
+    for (auto& poly : polygons) window.draw(poly);
 
-    for (auto& ray : rays)
+    if (drawRays)
     {
-      sf::CircleShape endPoint(5.f, 20u);
-      endPoint.setOrigin({ 5, 5 });
-      endPoint.setFillColor(rayColor.asSfColor());
-      endPoint.setPosition(ray[1].position);
-      window.draw(ray);
-      window.draw(endPoint);
+      for (auto& ray : rays)
+      {
+        auto& rayPoints = ray.points();
+        sf::CircleShape endPoint(5.f, 20u);
+        endPoint.setOrigin({ 5, 5 });
+        endPoint.setFillColor(rayColor.asSfColor());
+        endPoint.setPosition(rayPoints[end].position);
+        window.draw(rayPoints);
+        window.draw(endPoint);
+      }
     }
+
+    if (drawLight) window.draw(light);
 
     ImGui::SFML::Render(window);
 
