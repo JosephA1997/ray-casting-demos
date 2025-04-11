@@ -167,3 +167,23 @@
   m_points[start].color = color;
   m_points[end].color = color;
 }
+
+ void Ray::calculateIntersect(const std::vector<sf::VertexArray>& polygons)
+ {
+   sf::Vector2f closestIntersection = m_points[end].position;
+   std::optional<sf::Vector2f> currentIntersect{};
+   for (auto& poly : polygons)
+   {
+     for (int i = 1; i <= poly.getVertexCount() - 1; i++) {
+       currentIntersect = lineIntersect({ m_points[start].position, m_points[end].position }, { poly[i - 1].position , poly[i].position });
+       if (currentIntersect)
+       {
+         if ((closestIntersection - m_points[start].position).length() > (currentIntersect.value() - m_points[start].position).length())
+         {
+           closestIntersection = currentIntersect.value();
+         }
+       }
+     }
+   }
+   changeEnd(closestIntersection);
+ }

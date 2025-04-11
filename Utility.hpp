@@ -9,6 +9,8 @@
 #include "Random.h"
 #include "Ray.h"
 
+
+
 template<typename T, typename U, typename V>
 inline T getRandomNumber(U min, V max)
 {
@@ -131,3 +133,20 @@ inline float distanceBetween(sf::Vector2f startPoint, sf::Vector2f endPoint)
 {
   return sqrtf(powf(endPoint.x - startPoint.x, 2) + powf(endPoint.y - startPoint.y, 2));
 }
+
+
+//imGui Variables
+inline sf::Vector2f mousePos{};
+inline float polySize[2] = { 100.f, 100.f };
+inline int numRays{ 500 };
+inline int vertexBounds[2] = { 3u, 10u };
+inline int averageSize{ 100u };
+inline float rayLength{ 500.f };
+inline imguiColor rayColor = constructImguiColor(sf::Color::Red);
+inline imguiColor lightColor = constructImguiColor(sf::Color::Yellow);
+inline bool drawRays{ false };
+inline bool drawLight{ true };
+inline bool drawEndPoints{ false };
+inline bool boundedLight{ false };
+inline int lightCenterAngle{0};
+inline int lightOffsetAngle{45};

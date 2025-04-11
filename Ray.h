@@ -33,7 +33,7 @@ public:
   void change(const Ray& ray, bool copyColor = false);
   void change(sf::Vector2f startPoint, sf::Vector2f endPoint);
   void change(sf::Vector2f startPoint, sf::Vector2f endPoint, sf::Color color);
-
+  
   void changeStart(sf::Vector2f startPoint, sf::Color color);
   void changeStart(sf::Vector2f startPoint);
   void changeStart(const Ray& ray, bool copyColor = false);
@@ -43,6 +43,8 @@ public:
   void changeEnd(const Ray& ray, bool copyColor = false);
 
   void changeColor(sf::Color color);
+
+  void calculateIntersect(const std::vector<sf::VertexArray>& polygons);
 
   bool operator== (const Ray& rhs)
   {

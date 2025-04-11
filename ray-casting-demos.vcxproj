@@ -142,10 +142,12 @@
     <ClCompile Include="..\..\..\..\..\dev\libraries\imgui\imgui_draw.cpp" />
     <ClCompile Include="..\..\..\..\..\dev\libraries\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\..\..\..\..\dev\libraries\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Light.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Ray.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Utility.hpp" />
     <ClInclude Include="Random.h" />
     <ClInclude Include="Ray.h" />
